@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, Clock, CheckCircle, Lock, Unlock } from "lucide-react"
+import { AlertCircle, Clock, CheckCircle, Lock, Unlock, AlertTriangle } from "lucide-react"
 
 interface Notification {
   id: string
@@ -12,6 +12,13 @@ interface Notification {
   location?: {
     latitude: number
     longitude: number
+  }
+  metadata?: {
+    distanceMoved?: number
+    initialLocation?: {
+      latitude: number
+      longitude: number
+    }
   }
   read: boolean
   device: {
@@ -51,6 +58,8 @@ export default function NotificationHistory() {
 
   const getIcon = (type: string) => {
     switch (type) {
+      case "theft_alert":
+        return <AlertTriangle className="w-4 h-4 text-red-500 animate-pulse" />
       case "motion_detected":
         return <AlertCircle className="w-4 h-4 text-destructive" />
       case "device_locked":
@@ -79,6 +88,18 @@ export default function NotificationHistory() {
   }
 
   const formatDescription = (notification: Notification) => {
+    if (notification.type === "theft_alert") {
+      const distance = notification.metadata?.distanceMoved || 0
+      if (distance > 0) {
+        return `🚨 THEFT! Bike moved ${Math.round(distance)} meters from locked position`
+      }
+      // Fallback to parsing from message if metadata not available
+      const match = notification.message.match(/(\d+)\s*meters?/)
+      if (match) {
+        return `🚨 THEFT! Bike moved ${match[1]} meters from locked position`
+      }
+      return notification.message
+    }
     if (notification.type === "motion_detected" && notification.location) {
       return `Threat at ${notification.location.latitude.toFixed(4)}, ${notification.location.longitude.toFixed(4)}`
     }
@@ -96,11 +117,19 @@ export default function NotificationHistory() {
           <p className="text-sm text-muted-foreground text-center py-4">No notifications yet</p>
         ) : (
           notifications.map((notification) => (
-            <div key={notification.id} className="flex gap-3 pb-3 border-b border-border/20 last:border-0 last:pb-0">
+            <div 
+              key={notification.id} 
+              className={`flex gap-3 pb-3 border-b border-border/20 last:border-0 last:pb-0 ${
+                notification.type === 'theft_alert' ? 'bg-red-500/10 -mx-2 px-2 py-2 rounded' : ''
+              }`}
+            >
               <div className="mt-1">{getIcon(notification.type)}</div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {notification.type === "motion_detected" ? "Motion Detected" : 
+                <p className={`text-sm font-medium truncate ${
+                  notification.type === 'theft_alert' ? 'text-red-500 font-bold' : 'text-foreground'
+                }`}>
+                  {notification.type === "theft_alert" ? "🚨 THEFT ALERT" :
+                   notification.type === "motion_detected" ? "Motion Detected" : 
                    notification.type === "device_locked" ? "Bike Locked" :
                    notification.type === "device_unlocked" ? "Bike Unlocked" : 
                    notification.message}

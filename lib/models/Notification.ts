@@ -3,12 +3,19 @@ import mongoose, { Schema, Document } from 'mongoose'
 export interface INotification extends Document {
   userId: mongoose.Types.ObjectId
   deviceId: mongoose.Types.ObjectId
-  type: 'motion_detected' | 'device_locked' | 'device_unlocked' | 'location_updated'
+  type: 'motion_detected' | 'device_locked' | 'device_unlocked' | 'location_updated' | 'theft_alert'
   message: string
   timestamp: Date
   location?: {
     latitude: number
     longitude: number
+  }
+  metadata?: {
+    distanceMoved?: number
+    initialLocation?: {
+      latitude: number
+      longitude: number
+    }
   }
   read: boolean
   createdAt: Date
@@ -28,7 +35,7 @@ const NotificationSchema = new Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ['motion_detected', 'device_locked', 'device_unlocked', 'location_updated'],
+      enum: ['motion_detected', 'device_locked', 'device_unlocked', 'location_updated', 'theft_alert'],
       required: true,
     },
     message: {
@@ -45,6 +52,13 @@ const NotificationSchema = new Schema<INotification>(
       },
       longitude: {
         type: Number,
+      },
+    },
+    metadata: {
+      distanceMoved: Number,
+      initialLocation: {
+        latitude: Number,
+        longitude: Number,
       },
     },
     read: {

@@ -29,6 +29,13 @@ interface Notification {
     latitude: number
     longitude: number
   }
+  metadata?: {
+    distanceMoved?: number
+    initialLocation?: {
+      latitude: number
+      longitude: number
+    }
+  }
   read: boolean
   device: {
     name: string
@@ -200,47 +207,62 @@ export default function SecurityTab() {
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground">Recent Notifications</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {notifications.map((notification) => (
-                  <div 
-                    key={notification.id} 
-                    className={`rounded-lg p-3 border ${
-                      notification.type === 'motion_detected' 
-                        ? 'bg-destructive/10 border-destructive/30' 
-                        : 'bg-primary/10 border-primary/30'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-2">
-                        {notification.type === 'motion_detected' ? (
-                          <AlertTriangle className="w-4 h-4 text-destructive mt-0.5" />
-                        ) : (
-                          <CheckCircle className="w-4 h-4 text-primary mt-0.5" />
-                        )}
-                        <div>
-                          <p className={`text-sm font-semibold ${
-                            notification.type === 'motion_detected' ? 'text-destructive' : 'text-primary'
-                          }`}>
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(notification.timestamp).toLocaleString()}
-                          </p>
-                          {notification.location && notification.location.latitude && notification.location.longitude && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Location: {notification.location.latitude.toFixed(6)}, {notification.location.longitude.toFixed(6)}
-                            </p>
+                {notifications.map((notification) => {
+                  const isTheft = notification.type === 'theft_alert'
+                  const isMotion = notification.type === 'motion_detected'
+                  const distance = notification.metadata?.distanceMoved
+                  
+                  return (
+                    <div 
+                      key={notification.id} 
+                      className={`rounded-lg p-3 border ${
+                        isTheft
+                          ? 'bg-red-500/20 border-red-500/50 animate-pulse' 
+                          : isMotion 
+                          ? 'bg-destructive/10 border-destructive/30' 
+                          : 'bg-primary/10 border-primary/30'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-2">
+                          {isTheft ? (
+                            <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5" />
+                          ) : isMotion ? (
+                            <AlertTriangle className="w-4 h-4 text-destructive mt-0.5" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4 text-primary mt-0.5" />
                           )}
-                          <p className="text-xs text-muted-foreground">
-                            Device: {notification.device.name}
-                          </p>
+                          <div>
+                            <p className={`text-sm font-semibold ${
+                              isTheft ? 'text-red-500 font-bold' : isMotion ? 'text-destructive' : 'text-primary'
+                            }`}>
+                              {isTheft ? '🚨 THEFT ALERT!' : notification.message}
+                            </p>
+                            {isTheft && distance && (
+                              <p className="text-xs text-red-400 font-semibold mt-1">
+                                Bike moved {Math.round(distance)} meters from locked position!
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(notification.timestamp).toLocaleString()}
+                            </p>
+                            {notification.location && notification.location.latitude && notification.location.longitude && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Location: {notification.location.latitude.toFixed(6)}, {notification.location.longitude.toFixed(6)}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Device: {notification.device.name}
+                            </p>
+                          </div>
                         </div>
+                        {!notification.read && (
+                          <div className={`w-2 h-2 rounded-full ${isTheft ? 'bg-red-500' : 'bg-primary'}`} title="Unread" />
+                        )}
                       </div>
-                      {!notification.read && (
-                        <div className="w-2 h-2 bg-primary rounded-full" title="Unread" />
-                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

@@ -23,7 +23,9 @@ export default function DashboardPage() {
   const [devices, setDevices] = useState<Device[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const lastMotionEventCount = useRef<Record<string, number>>({})
+  const lastTheftAlertCheck = useRef<Record<string, boolean>>({})
   const audioRef = useRef<any>(null)
+  const theftAudioRef = useRef<any>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
 
   useEffect(() => {
@@ -97,6 +99,57 @@ export default function DashboardPage() {
     
     audioRef.current = { play: createAlertSound }
     
+    // Create THEFT alert sound - more intense 10-second alarm
+    const createTheftAlertSound = async () => {
+      try {
+        if (!audioContextRef.current) {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+        }
+        
+        const ctx = audioContextRef.current
+        
+        if (ctx.state === 'suspended') {
+          await ctx.resume().catch(e => console.log('Could not resume audio:', e))
+        }
+        
+        // Create an intense 10-second alarm for THEFT
+        const totalDuration = 10 // 10 seconds for theft alert
+        const beepDuration = 0.1 // 100ms beeps
+        const pauseDuration = 0.05 // 50ms pause
+        const patternLength = beepDuration + pauseDuration
+        const beepCount = Math.floor(totalDuration / patternLength)
+        
+        console.log(`🚨🚨🚨 PLAYING THEFT ALERT: ${beepCount} intense beeps over ${totalDuration} seconds`)
+        
+        for (let i = 0; i < beepCount; i++) {
+          const startTime = ctx.currentTime + (i * patternLength)
+          
+          const oscillator = ctx.createOscillator()
+          const gainNode = ctx.createGain()
+          
+          oscillator.connect(gainNode)
+          gainNode.connect(ctx.destination)
+          
+          // Very high pitched alternating frequencies for urgent alarm
+          oscillator.frequency.value = i % 2 === 0 ? 2000 : 1800
+          oscillator.type = 'square'
+          
+          // Maximum volume
+          gainNode.gain.setValueAtTime(1.0, startTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + beepDuration)
+          
+          oscillator.start(startTime)
+          oscillator.stop(startTime + beepDuration)
+        }
+        
+        console.log(`🚨 THEFT ALERT SOUND ACTIVATED!`)
+      } catch (error) {
+        console.error('Theft audio error:', error)
+      }
+    }
+    
+    theftAudioRef.current = { play: createTheftAlertSound }
+    
     const fetchUserAndDevices = async () => {
       try {
         // First, try to get user from API
@@ -151,7 +204,41 @@ export default function DashboardPage() {
     devices.forEach((device) => {
       console.log(`Device ${device.uniqueId}: status=${device.status}, motionEvents=${device.motionEvents?.length || 0}`)
       
-      // Only show alerts if the bike is locked
+      // CHECK FOR THEFT ALERT FIRST (higher priority)
+      if (device.theftDetection && device.theftDetection.isActive && device.theftDetection.theftAlerted) {
+        const deviceId = device.uniqueId
+        
+        // Check if we've already shown this theft alert
+        if (!lastTheftAlertCheck.current[deviceId]) {
+          console.log('🚨🚨🚨 THEFT ALERT DETECTED!')
+          
+          const distance = device.theftDetection.maxDistance || 0
+          
+          // Show critical theft alert
+          toast.error("🚨 THEFT ALERT - BIKE IS BEING STOLEN!", {
+            description: `${device.name} has moved ${distance.toFixed(0)} meters from its locked position!`,
+            duration: 20000, // Show for 20 seconds
+          })
+          
+          // Play intense 10-second theft alarm
+          if (theftAudioRef.current && theftAudioRef.current.play) {
+            console.log('Playing 10-second THEFT ALARM...')
+            theftAudioRef.current.play()
+          }
+          
+          // Mark as alerted
+          lastTheftAlertCheck.current[deviceId] = true
+        }
+        
+        return // Skip normal motion check if theft detected
+      }
+      
+      // Reset theft alert flag when device is unlocked
+      if (device.status !== 'locked' && lastTheftAlertCheck.current[device.uniqueId]) {
+        lastTheftAlertCheck.current[device.uniqueId] = false
+      }
+      
+      // NORMAL MOTION DETECTION (only if bike is locked)
       if (device.status === 'locked' && device.motionEvents && device.motionEvents.length > 0) {
         const motionEventCount = device.motionEvents.length
         const deviceId = device.uniqueId

@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
           message: notification.message,
           timestamp: notification.timestamp,
           location: notification.location,
+          metadata: notification.metadata,
           read: notification.read,
           device: notification.deviceId,
         })),

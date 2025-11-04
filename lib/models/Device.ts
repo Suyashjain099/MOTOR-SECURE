@@ -20,6 +20,16 @@ export interface IDevice extends Document {
       longitude: number
     }
   }>
+  theftDetection?: {
+    isActive: boolean
+    initialLocation?: {
+      latitude: number
+      longitude: number
+    }
+    initialMotionTime?: Date
+    maxDistance?: number
+    theftAlerted?: boolean
+  }
   createdAt: Date
   updatedAt: Date
 }
@@ -71,6 +81,25 @@ const DeviceSchema: Schema<IDevice> = new Schema(
         },
       },
     ],
+    theftDetection: {
+      isActive: {
+        type: Boolean,
+        default: false,
+      },
+      initialLocation: {
+        latitude: Number,
+        longitude: Number,
+      },
+      initialMotionTime: Date,
+      maxDistance: {
+        type: Number,
+        default: 0,
+      },
+      theftAlerted: {
+        type: Boolean,
+        default: false,
+      },
+    },
   },
   {
     timestamps: true,
