@@ -238,6 +238,15 @@ export default function DashboardPage() {
         lastTheftAlertCheck.current[device.uniqueId] = false
       }
       
+      // Reset counter immediately when bike is unlocked to prevent false alerts
+      if (device.status !== 'locked') {
+        if (lastMotionEventCount.current[device.uniqueId] !== undefined) {
+          console.log(`Device ${device.uniqueId} is unlocked, resetting motion counter`)
+          lastMotionEventCount.current[device.uniqueId] = device.motionEvents ? device.motionEvents.length : 0
+        }
+        return // Skip motion detection entirely when unlocked
+      }
+      
       // NORMAL MOTION DETECTION (only if bike is locked)
       if (device.status === 'locked' && device.motionEvents && device.motionEvents.length > 0) {
         const motionEventCount = device.motionEvents.length
@@ -288,12 +297,6 @@ export default function DashboardPage() {
         } else {
           console.log(`No new motion for ${deviceId}`)
         }
-      }
-      
-      // Reset counter when bike is unlocked
-      if (device.status !== 'locked' && lastMotionEventCount.current[device.uniqueId] !== undefined) {
-        console.log(`Device ${device.uniqueId} unlocked, resetting counter`)
-        lastMotionEventCount.current[device.uniqueId] = device.motionEvents ? device.motionEvents.length : 0
       }
     })
   }

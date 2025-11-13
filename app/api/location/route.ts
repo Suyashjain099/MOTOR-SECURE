@@ -124,8 +124,8 @@ export async function POST(request: NextRequest) {
         
         console.log(`📏 Distance moved: ${distance.toFixed(2)} meters (max: ${device.theftDetection.maxDistance.toFixed(2)}m)`)
         
-        // THEFT ALERT: If bike moved more than 30 meters
-        if (distance > 30 && !device.theftDetection.theftAlerted) {
+        // THEFT ALERT: If bike moved more than 2 meters
+        if (distance > 2 && !device.theftDetection.theftAlerted) {
           device.theftDetection.theftAlerted = true
           
           // Create THEFT ALERT notification
